@@ -995,7 +995,30 @@ export default function App() {
   }
 
   return (
-    <div style={css.page}>
+    function LandingHero() {
+  return (
+    <div style={{borderBottom:"1px solid rgba(232,225,213,0.12)",padding:"48px 24px 40px",maxWidth:640,margin:"0 auto"}}>
+      <div style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:11,letterSpacing:"0.16em",textTransform:"uppercase",color:"#C99A3E",marginBottom:10}}>Tofamba · AlertEngine</div>
+      <h1 style={{fontFamily:"'Fraunces',serif",fontWeight:600,fontSize:"clamp(28px,5vw,42px)",letterSpacing:"-0.01em",color:"#E8E1D5",margin:"0 0 16px",lineHeight:1.15}}>When something breaks,<br/>who authorized the fix?</h1>
+      <p style={{fontFamily:"'IBM Plex Sans',sans-serif",fontSize:16,color:"#8FA0AF",margin:"0 0 32px",maxWidth:"46ch",lineHeight:1.6}}>AlertEngine detects API incidents, lets Claude diagnose the root cause, and sends you a one-tap approval link on WhatsApp or Telegram. Nothing executes without your authorization. Every action is logged immutably.</p>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:32}}>
+        {[{icon:"⚡",label:"Free SDK",desc:"pip install fastapi-alertengine · MIT · never expires"},{icon:"🔍",label:"Shadow Mode",desc:"30-day evaluation · zero risk · governance report"},{icon:"✅",label:"Human-authorized",desc:"JWT-signed approval · 5-min TTL · immutable audit trail"}].map(p=>(
+          <div key={p.label} style={{background:"#162535",border:"1px solid rgba(232,225,213,0.12)",borderRadius:3,padding:"14px"}}>
+            <div style={{fontSize:20,marginBottom:6}}>{p.icon}</div>
+            <div style={{fontFamily:"'Fraunces',serif",fontWeight:600,fontSize:13,color:"#E8E1D5",marginBottom:5}}>{p.label}</div>
+            <div style={{fontFamily:"'IBM Plex Sans',sans-serif",fontSize:11.5,color:"#8FA0AF",lineHeight:1.5}}>{p.desc}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
+        <a href="https://tofamba.github.io/fastapi-alertengine/simulator.html" target="_blank" rel="noreferrer" style={{fontFamily:"'IBM Plex Sans',sans-serif",fontSize:13,color:"#C99A3E",textDecoration:"underline"}}>Try the incident simulator →</a>
+        <a href="https://github.com/Tofamba/fastapi-alertengine" target="_blank" rel="noreferrer" style={{fontFamily:"'IBM Plex Sans',sans-serif",fontSize:13,color:"#8FA0AF",textDecoration:"underline"}}>GitHub repo</a>
+        <a href="https://pypi.org/project/fastapi-alertengine/" target="_blank" rel="noreferrer" style={{fontFamily:"'IBM Plex Sans',sans-serif",fontSize:13,color:"#8FA0AF",textDecoration:"underline"}}>PyPI package</a>
+      </div>
+    </div>
+  );
+}<div style={css.page}>
+      <LandingHero />
       {/* Top nav — only show when not mid-onboarding */}
       {(view === "customer" || view === "provider") && (
         <div style={{

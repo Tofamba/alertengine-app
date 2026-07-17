@@ -719,6 +719,8 @@ function CustomerDashboard({ tenantId, secret, onForget }) {
         </div>
       )}
 
+      <PulseDashboard apiKey={PULSE_API_KEY} />
+
       {tenant && <Stamp live={live} />}
 
       {tenant && (
@@ -1030,6 +1032,148 @@ function LandingHero() {
           PyPI package
         </a>
       </div>
+    </div>
+  );
+}
+
+
+// ── TOFAMBA PULSE ─────────────────────────────────────────────────────────────
+
+const PULSE_API = "https://enthusiastic-perception-production-a16b.up.railway.app";
+const PULSE_API_KEY = "tofamba-test";
+
+function SuspendedAgentCard({ session, onResolve }) {
+  const [submitting, setSubmitting] = React.useState(false);
+  const [elapsed, setElapsed] = React.useState(0);
+  React.useEffect(() => {
+    const started = session.last_seen || Date.now() / 1000;
+    const interval = setInterval(() => {
+      setElapsed(Math.floor(Date.now() / 1000 - started));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [session]);
+  async function handleDecision(option) {
+    setSubmitting(true);
+    try {
+      await fetch(`${PULSE_API}/pulse/answer/${session.session_id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-pulse-api-key": PULSE_API_KEY },
+        body: JSON.stringify({ answer: option, source: "dashboard" }),
+      });
+      onResolve(session.session_id, option);
+    } catch (e) { console.error(e); }
+    finally { setSubmitting(false); }
+  }
+  const lastEvent = session._last_event || {};
+  const question = lastEvent.message || "Agent is waiting for your input.";
+  const options = lastEvent.options || [];
+  return (
+    <div style={{
+      background: T.ink2, border: `1px solid ${T.borderBr}`,
+      borderLeft: `4px solid ${T.brass}`, borderRadius: 3,
+      padding: "20px", marginBottom: 16,
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+        <div>
+          <div style={{ ...css.mono, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: T.brass, marginBottom: 4 }}>Decision Required</div>
+          <div style={{ fontWeight: 600, fontSize: 15, color: T.paper }}>{session.agent_name}</div>
+          <div style={{ ...css.mono, fontSize: 10, color: T.dim, marginTop: 2 }}>{session.session_id}</div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ ...css.mono, fontSize: 10, color: T.brass, letterSpacing: "0.08em" }}>WAITING {elapsed}s</div>
+          {session.cost_usd > 0 && <div style={{ ...css.mono, fontSize: 10, color: T.dim, marginTop: 3 }}>${Number(session.cost_usd).toFixed(4)} spent</div>}
+        </div>
+      </div>
+      <div style={{ background: T.ink, border: `1px solid ${T.border}`, borderRadius: 3, padding: "12px 14px", marginBottom: 16, fontSize: 14, color: T.paper, lineHeight: 1.55 }}>
+        {question}
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        {options.length > 0 ? options.map((opt, i) => (
+          <button key={opt} onClick={() => handleDecision(opt)} disabled={submitting} style={{
+            background: "transparent", border: `1px solid ${T.borderBr}`, borderRadius: 3,
+            color: T.paper, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13,
+            padding: "8px 14px", cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.5 : 1,
+          }}>
+            <span style={{ color: T.brass, marginRight: 6 }}>{String.fromCharCode(65 + i)})</span>{opt}
+          </button>
+        )) : (
+          <>
+            <button onClick={() => handleDecision("approved")} disabled={submitting} style={{ background: T.green, border: "none", borderRadius: 3, color: "#fff", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, padding: "8px 16px", cursor: "pointer" }}>Approve</button>
+            <button onClick={() => handleDecision("rejected")} disabled={submitting} style={{ background: "transparent", border: `1px solid rgba(193,86,74,0.4)`, borderRadius: 3, color: T.red, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, padding: "8px 16px", cursor: "pointer" }}>Reject</button>
+          </>
+        )}
+      </div>
+      <div style={{ fontSize: 11, color: T.dim }}>{submitting ? "Sending decision to agent..." : "Agent execution is paused until you respond."}</div>
+    </div>
+  );
+}
+
+function PulseDashboard({ apiKey }) {
+  const [sessions, setSessions] = React.useState([]);
+  const [sessionDetails, setSessionDetails] = React.useState({});
+  const [loading, setLoading] = React.useState(true);
+  const key = apiKey || PULSE_API_KEY;
+  async function loadSessions() {
+    try {
+      const r = await fetch(`${PULSE_API}/pulse/sessions`, { headers: { "x-pulse-api-key": key } });
+      if (!r.ok) return;
+      const d = await r.json();
+      const list = d.sessions || [];
+      setSessions(list);
+      for (const s of list.filter(s => s.status === "waiting_for_human")) {
+        const r2 = await fetch(`${PULSE_API}/pulse/session/${s.session_id}`, { headers: { "x-pulse-api-key": key } });
+        if (r2.ok) {
+          const detail = await r2.json();
+          const last = [...(detail.events || [])].reverse().find(e => e.event_type === "INPUT_REQUIRED");
+          if (last) setSessionDetails(prev => ({ ...prev, [s.session_id]: last }));
+        }
+      }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }
+  React.useEffect(() => {
+    loadSessions();
+    const interval = setInterval(loadSessions, 10000);
+    return () => clearInterval(interval);
+  }, []);
+  function handleResolve(sessionId) {
+    setSessions(prev => prev.map(s => s.session_id === sessionId ? { ...s, status: "running" } : s));
+  }
+  const waiting = sessions.filter(s => s.status === "waiting_for_human");
+  const running = sessions.filter(s => s.status === "running");
+  const finished = sessions.filter(s => ["completed","failed"].includes(s.status));
+  if (loading) return null;
+  if (sessions.length === 0) return (
+    <div style={{ background: T.ink2, border: `1px solid ${T.border}`, borderRadius: 3, padding: "20px", marginBottom: 20 }}>
+      <div style={{ ...css.mono, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.brass, marginBottom: 8 }}>Tofamba Pulse</div>
+      <div style={{ fontSize: 14, color: T.dim }}>No agent sessions yet. Wrap your agent with <span style={{ ...css.mono, color: T.brass }}>supervise()</span> to start.</div>
+      <a href="https://github.com/Tofamba/tofamba-pulse" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: T.brass, textDecoration: "underline", display: "block", marginTop: 8 }}>Tofamba Pulse SDK →</a>
+    </div>
+  );
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ ...css.mono, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: T.brass }}>Tofamba Pulse — Agent Sessions</div>
+        <button onClick={loadSessions} style={{ background: "none", border: "none", color: T.dim, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, cursor: "pointer" }}>↻</button>
+      </div>
+      {waiting.map(s => <SuspendedAgentCard key={s.session_id} session={{ ...s, _last_event: sessionDetails[s.session_id] }} onResolve={handleResolve} />)}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 12 }}>
+        {[{num:waiting.length,label:"Waiting",color:T.brass},{num:running.length,label:"Running",color:T.green},{num:finished.length,label:"Completed",color:T.dim}].map(c => (
+          <div key={c.label} style={{ background: T.ink2, border: `1px solid ${T.border}`, borderRadius: 3, padding: "10px 14px" }}>
+            <div style={{ ...css.serif, fontWeight: 600, fontSize: 22, color: c.color, lineHeight: 1 }}>{c.num}</div>
+            <div style={{ ...css.mono, fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase", color: T.dim, marginTop: 4 }}>{c.label}</div>
+          </div>
+        ))}
+      </div>
+      {finished.slice(0,5).map(s => (
+        <div key={s.session_id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: T.ink2, border: `1px solid ${T.border}`, borderRadius: 3, marginBottom: 6 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.paper }}>{s.agent_name}</div>
+            <div style={{ ...css.mono, fontSize: 10, color: T.dim }}>{s.session_id}</div>
+          </div>
+          <div style={{ ...css.mono, fontSize: 10, textTransform: "uppercase", color: s.status === "completed" ? T.green : T.red }}>{s.status}</div>
+        </div>
+      ))}
     </div>
   );
 }

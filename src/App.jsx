@@ -902,7 +902,7 @@ function ProviderDashboard() {
                     {t.shadow_enabled_at && <LedgerRow label="Shadow since" value={new Date(t.shadow_enabled_at * 1000).toLocaleDateString()} />}
                     {t.shadow_disabled_at && <LedgerRow label="Went live" value={new Date(t.shadow_disabled_at * 1000).toLocaleDateString()} />}
                     <div style={{ marginTop: 16 }}>
-                      <a href={`${API}/audit/${t.tenant_id}/report`} target="_blank" rel="noreferrer">
+                      <a href={`${API}/tenant/${t.tenant_id}/shadow`} target="_blank" rel="noreferrer">
                         <Btn variant="ghost" small>View audit report ↗</Btn>
                       </a>
                     </div>

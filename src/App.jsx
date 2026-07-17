@@ -749,6 +749,7 @@ function CustomerDashboard({ tenantId, secret, onForget }) {
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <Btn variant="ghost" onClick={fireTest} disabled={testLoading}>{testLoading ? "Firing…" : "Send test incident"}</Btn>
         <Btn variant="ghost" onClick={load}>Refresh</Btn>
+        <a href={`${API}/tenant/${tenantId}/shadow/governance.pdf?secret=${secret}`} target="_blank" rel="noreferrer" style={{textDecoration:"none"}}><Btn variant="ghost">Download Governance Report</Btn></a>
         {!live && <Btn variant="green" onClick={goLive} disabled={goLiveLoading}>{goLiveLoading ? "Going live…" : "Go live"}</Btn>}
         <Btn variant="danger" onClick={onForget}>Forget this device</Btn>
       </div>

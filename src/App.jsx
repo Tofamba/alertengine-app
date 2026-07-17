@@ -1043,9 +1043,9 @@ const PULSE_API = "https://enthusiastic-perception-production-a16b.up.railway.ap
 const PULSE_API_KEY = "tofamba-test";
 
 function SuspendedAgentCard({ session, onResolve }) {
-  const [submitting, setSubmitting] = React.useState(false);
-  const [elapsed, setElapsed] = React.useState(0);
-  React.useEffect(() => {
+  const [submitting, setSubmitting] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
     const started = session.last_seen || Date.now() / 1000;
     const interval = setInterval(() => {
       setElapsed(Math.floor(Date.now() / 1000 - started));
@@ -1109,9 +1109,9 @@ function SuspendedAgentCard({ session, onResolve }) {
 }
 
 function PulseDashboard({ apiKey }) {
-  const [sessions, setSessions] = React.useState([]);
-  const [sessionDetails, setSessionDetails] = React.useState({});
-  const [loading, setLoading] = React.useState(true);
+  const [sessions, setSessions] = useState([]);
+  const [sessionDetails, setSessionDetails] = useState({});
+  const [loading, setLoading] = useState(true);
   const key = apiKey || PULSE_API_KEY;
   async function loadSessions() {
     try {
@@ -1131,7 +1131,7 @@ function PulseDashboard({ apiKey }) {
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }
-  React.useEffect(() => {
+  useEffect(() => {
     loadSessions();
     const interval = setInterval(loadSessions, 10000);
     return () => clearInterval(interval);
